@@ -20,6 +20,9 @@ import net.md_5.bungee.EncryptionUtil;
 import net.md_5.bungee.PacketConstants;
 import net.md_5.bungee.UserConnection;
 import net.md_5.bungee.Util;
+import net.md_5.bungee.*;
+import net.md_5.bungee.netty.*;
+import net.md_5.bungee.protocol.packet.PacketFCEncryptionResponse;
 import net.md_5.bungee.api.Callback;
 import net.md_5.bungee.api.ChatColor;
 import net.md_5.bungee.api.ProxyServer;
@@ -32,12 +35,8 @@ import net.md_5.bungee.api.event.LoginEvent;
 import net.md_5.bungee.api.event.PostLoginEvent;
 import net.md_5.bungee.api.event.ProxyPingEvent;
 import net.md_5.bungee.http.HttpClient;
-import net.md_5.bungee.netty.HandlerBoss;
-import net.md_5.bungee.netty.ChannelWrapper;
-import net.md_5.bungee.netty.CipherDecoder;
-import net.md_5.bungee.netty.CipherEncoder;
-import net.md_5.bungee.netty.PacketDecoder;
-import net.md_5.bungee.netty.PacketHandler;
+import net.md_5.bungee.netty.cipher.CipherDecoder;
+import net.md_5.bungee.netty.cipher.CipherEncoder;
 import net.md_5.bungee.netty.PipelineUtils;
 import net.md_5.bungee.protocol.Forge;
 import net.md_5.bungee.protocol.MinecraftInput;
@@ -244,7 +243,7 @@ public class InitialHandler extends PacketHandler implements PendingConnection
         Preconditions.checkState( thisState == State.ENCRYPT, "Not expecting ENCRYPT" );
 
         sharedKey = EncryptionUtil.getSecret( encryptResponse, request );
-        Cipher decrypt = EncryptionUtil.getCipher( Cipher.DECRYPT_MODE, sharedKey );
+        BungeeCipher decrypt = EncryptionUtil.getCipher( false, sharedKey );
         ch.addBefore( PipelineUtils.PACKET_DECODE_HANDLER, PipelineUtils.DECRYPT_HANDLER, new CipherDecoder( decrypt ) );
 
         if ( this.onlineMode )
@@ -326,12 +325,13 @@ public class InitialHandler extends PacketHandler implements PendingConnection
                             unsafe().sendPacket( new PacketFCEncryptionResponse( new byte[ 0 ], new byte[ 0 ] ) );
                             try
                             {
-                                Cipher encrypt = EncryptionUtil.getCipher( Cipher.ENCRYPT_MODE, sharedKey );
+                                BungeeCipher encrypt = EncryptionUtil.getCipher( true, sharedKey );
                                 ch.addBefore( PipelineUtils.DECRYPT_HANDLER, PipelineUtils.ENCRYPT_HANDLER, new CipherEncoder( encrypt ) );
                             } catch ( GeneralSecurityException ex )
                             {
                                 disconnect( "Cipher error: " + Util.exception( ex ) );
                             }
+
                         }
                     }
                 } );

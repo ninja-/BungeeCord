@@ -23,11 +23,11 @@ import net.md_5.bungee.connection.CancelSendSignal;
 import net.md_5.bungee.connection.DownstreamBridge;
 import net.md_5.bungee.netty.HandlerBoss;
 import net.md_5.bungee.netty.ChannelWrapper;
-import net.md_5.bungee.netty.CipherDecoder;
-import net.md_5.bungee.netty.CipherEncoder;
 import net.md_5.bungee.netty.PacketDecoder;
 import net.md_5.bungee.netty.PacketHandler;
 import net.md_5.bungee.netty.PipelineUtils;
+import net.md_5.bungee.netty.cipher.CipherDecoder;
+import net.md_5.bungee.netty.cipher.CipherEncoder;
 import net.md_5.bungee.protocol.Forge;
 import net.md_5.bungee.protocol.MinecraftOutput;
 import net.md_5.bungee.protocol.packet.DefinedPacket;
@@ -88,14 +88,14 @@ public class ServerConnector extends PacketHandler
         // Skip encryption if we are not using Forge
         if ( user.getPendingConnection().getForgeLogin() == null )
         {
-            channel.write( PacketConstants.CLIENT_LOGIN );
+            channel.write(PacketConstants.CLIENT_LOGIN);
         }
     }
 
     @Override
     public void disconnected(ChannelWrapper channel) throws Exception
     {
-        user.getPendingConnects().remove( target );
+        user.getPendingConnects().remove(target);
     }
 
     @Override
@@ -224,7 +224,7 @@ public class ServerConnector extends PacketHandler
 
             ch.write( new PacketFCEncryptionResponse( shared, token ) );
 
-            Cipher encrypt = EncryptionUtil.getCipher( Cipher.ENCRYPT_MODE, secretkey );
+            BungeeCipher encrypt = EncryptionUtil.getCipher( true, secretkey );
             ch.addBefore( PipelineUtils.PACKET_DECODE_HANDLER, PipelineUtils.ENCRYPT_HANDLER, new CipherEncoder( encrypt ) );
 
             thisState = State.ENCRYPT_RESPONSE;
@@ -239,10 +239,10 @@ public class ServerConnector extends PacketHandler
     {
         Preconditions.checkState( thisState == State.ENCRYPT_RESPONSE, "Not expecting ENCRYPT_RESPONSE" );
 
-        Cipher decrypt = EncryptionUtil.getCipher( Cipher.DECRYPT_MODE, secretkey );
+        BungeeCipher decrypt = EncryptionUtil.getCipher( false, secretkey );
         ch.addBefore( PipelineUtils.PACKET_DECODE_HANDLER, PipelineUtils.DECRYPT_HANDLER, new CipherDecoder( decrypt ) );
 
-        ch.write( user.getPendingConnection().getForgeLogin() );
+        ch.write(user.getPendingConnection().getForgeLogin());
 
         ch.write( PacketConstants.CLIENT_LOGIN );
         thisState = State.LOGIN;
