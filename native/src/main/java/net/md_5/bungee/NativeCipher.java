@@ -1,5 +1,6 @@
 package net.md_5.bungee;
 
+import com.google.common.base.Preconditions;
 import com.google.common.io.ByteStreams;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
@@ -83,14 +84,15 @@ public class NativeCipher implements BungeeCipher
         // Smoke tests
         in.memoryAddress();
         out.memoryAddress();
+        Preconditions.checkState( pointer != 0, "Invalid pointer to AES key!" );
+        Preconditions.checkState( iv != null, "Invalid IV!" );
+
         // Store how many bytes we can cipher
         int length = in.readableBytes();
         // It is important to note that in AES CFB-8 mode, the number of read bytes, is the number of outputted bytes
-        if ( out.writableBytes() < length )
-        {
-            out.capacity( out.writerIndex() + length );
-        }
-        // Cipher the bytes
+        out.ensureWritable( length );
+
+         // Cipher the bytes
         nativeCipher.cipher( forEncryption, pointer, iv, in.memoryAddress() + in.readerIndex(), out.memoryAddress() + out.writerIndex(), length );
 
         // Go to the end of the buffer, all bytes would of been read
